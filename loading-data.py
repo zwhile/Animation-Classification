@@ -27,7 +27,7 @@ def main(argv):
                                            ,transform=data_transform)
     dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                                  batch_size=4, shuffle=True,
-                                                 num_workers=2)
+                                                 num_workers=4)
     classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
     
     def imshow(img):
