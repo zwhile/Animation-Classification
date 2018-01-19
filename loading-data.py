@@ -30,7 +30,10 @@ classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
 def imshow(img):
     img = img / 2 + 0.5     # unnormalize
     npimg = img.numpy()
-    plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
+    print(np.transpose(npimg, (1, 2, 0)))
+    print("max: {}".format(np.maximum(np.transpose(npimg, (1, 2, 0)))))
+    print("min: {}".format(np.minimum(np.transpose(npimg, (1, 2, 0)))))
+    #plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
 
 
 # get some random training images
