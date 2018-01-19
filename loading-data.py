@@ -15,7 +15,7 @@ import numpy as np
 
 data_transform = transforms.Compose([
         #transforms.RandomResizedCrop(224),
-        transforms.RandomResizedCrop(),
+        transforms.RandomResizedCrop(224),
         #transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
         #transforms.Normalize(mean=[0.485, 0.456, 0.406],
