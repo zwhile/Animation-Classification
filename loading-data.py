@@ -6,7 +6,11 @@ Created on Fri Jan 19 16:56:26 2018
 """
 
 import torch
-from torchvision import transforms, datasets
+import torchvision
+import torchvision.transforms as transforms
+
+import matplotlib.pyplot as plt
+import numpy as np
 
 data_transform = transforms.Compose([
         transforms.RandomResizedCrop(224),
@@ -20,3 +24,19 @@ cartoon_dataset = datasets.ImageFolder(root='data',
 dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                              batch_size=4, shuffle=True,
                                              num_workers=4)
+classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
+
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+
+
+# get some random training images
+dataiter = iter(dataset_loader)
+images, labels = dataiter.next()
+
+# show images
+imshow(torchvision.utils.make_grid(images))
+# print labels
+print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
