@@ -25,7 +25,7 @@ cartoon_dataset = datasets.ImageFolder(root='data'
                                        ,transform=data_transform)
 dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                              batch_size=4, shuffle=True,
-                                             num_workers=2)
+                                             num_workers=3)
 classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
 
 def imshow(img):
@@ -39,7 +39,8 @@ def imshow(img):
     #npimg = norm_img.numpy()
     #print("max norm: {}".format(np.amax(np.transpose(npimg, (1, 2, 0)))))
     #print("min norm: {}".format(np.amin(np.transpose(npimg, (1, 2, 0)))))
-    #plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
+    plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
 # get some random training images
