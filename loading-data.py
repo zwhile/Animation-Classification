@@ -20,8 +20,8 @@ data_transform = transforms.Compose([
         #transforms.Normalize(mean=[0.485, 0.456, 0.406],
                              #std=[0.229, 0.224, 0.225])
     ])
-cartoon_dataset = datasets.ImageFolder(root='data')
-                                       #,transform=data_transform)
+cartoon_dataset = datasets.ImageFolder(root='data'
+                                       ,transform=data_transform)
 dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                              batch_size=4, shuffle=True,
                                              num_workers=4)
