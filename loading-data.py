@@ -47,6 +47,7 @@ def main(argv):
             transforms.RandomResizedCrop(224),
             #transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
             #transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  #std=[0.229, 0.224, 0.225])
         ])
@@ -77,7 +78,7 @@ def main(argv):
     images, labels = dataiter.next()
     
     # show images
-    imshow(torchvision.utils.make_grid(images))
+    #imshow(torchvision.utils.make_grid(images))
     # print labels
     print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 #----------------------------------------------------------------------------------------
