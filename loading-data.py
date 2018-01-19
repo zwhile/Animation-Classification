@@ -42,7 +42,7 @@ class Net(nn.Module):
 def main(argv):
     
     data_transform = transforms.Compose([
-            transforms.Scale((32,32)),
+            #transforms.Scale((32,32)),
             #transforms.RandomResizedCrop(224),
             transforms.RandomResizedCrop(224),
             #transforms.RandomHorizontalFlip(),
