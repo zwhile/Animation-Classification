@@ -40,7 +40,7 @@ def imshow(img):
     #print("max norm: {}".format(np.amax(np.transpose(npimg, (1, 2, 0)))))
     #print("min norm: {}".format(np.amin(np.transpose(npimg, (1, 2, 0)))))
     plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
-    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    #plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
 # get some random training images
