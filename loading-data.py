@@ -18,6 +18,8 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
+import torch.optim as optim
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -38,8 +40,6 @@ class Net(nn.Module):
         return x
 
 def main(argv):
-    
-    net = Net()
     
     data_transform = transforms.Compose([
             #transforms.RandomResizedCrop(224),
@@ -79,6 +79,13 @@ def main(argv):
     imshow(torchvision.utils.make_grid(images))
     # print labels
     print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------
+    net = Net()
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------    
+    criterion = nn.CrossEntropyLoss()
+    optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 
 if __name__ == "__main__":
     main(sys.argv)
