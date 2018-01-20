@@ -51,7 +51,7 @@ def main(argv):
     data_transform = transforms.Compose([
             #transforms.Scale((32,32)),
             #transforms.RandomResizedCrop(224),
-            transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(32),
             #transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
