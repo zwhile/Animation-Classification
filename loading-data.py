@@ -31,12 +31,19 @@ class Net(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
+        print("start: {}".format(x.size))
         x = self.pool(F.relu(self.conv1(x)))
+        print("conv1: {}".format(x.size))
         x = self.pool(F.relu(self.conv2(x)))
-        x = x.view(-1, 179776)
+        print("conv2: {}".format(x.size))
+        x = x.view(-1, 16 * 5 * 5)
+        print("view: {}".format(x.size))
         x = F.relu(self.fc1(x))
+        print("relu: {}".format(x.size))
         x = F.relu(self.fc2(x))
+        print("relu: {}".format(x.size))
         x = self.fc3(x)
+        print("fc3: {}".format(x.size))
         return x
 
 def main(argv):
@@ -80,7 +87,7 @@ def main(argv):
     # show images
     #imshow(torchvision.utils.make_grid(images))
     # print labels
-    print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+    #print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
