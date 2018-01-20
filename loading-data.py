@@ -31,19 +31,19 @@ class Net(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
-        print("start: {}".format(x.size()))
+        #print("start: {}".format(x.size()))
         x = self.pool(F.relu(self.conv1(x)))
-        print("conv1: {}".format(x.size()))
+        #print("conv1: {}".format(x.size()))
         x = self.pool(F.relu(self.conv2(x)))
-        print("conv2: {}".format(x.size()))
+        #print("conv2: {}".format(x.size()))
         x = x.view(-1, 16 * 5 * 5)
-        print("view: {}".format(x.size()))
+        #print("view: {}".format(x.size()))
         x = F.relu(self.fc1(x))
-        print("relu: {}".format(x.size()))
+        #print("relu: {}".format(x.size()))
         x = F.relu(self.fc2(x))
-        print("relu: {}".format(x.size()))
+        #print("relu: {}".format(x.size()))
         x = self.fc3(x)
-        print("fc3: {}".format(x.size()))
+        #print("fc3: {}".format(x.size()))
         return x
 
 def main(argv):
@@ -91,6 +91,7 @@ def main(argv):
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
+    net.cuda()
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------    
     criterion = nn.CrossEntropyLoss()
@@ -105,7 +106,7 @@ def main(argv):
             inputs, labels = data
     
             # wrap them in Variable
-            inputs, labels = Variable(inputs), Variable(labels)
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
     
             # zero the parameter gradients
             optimizer.zero_grad()
