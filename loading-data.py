@@ -106,7 +106,7 @@ def main(argv):
             inputs, labels = data
     
             # wrap them in Variable
-            inputs, labels = Variable(inputs, Variable(labels))
+            inputs, labels = Variable(inputs), Variable(labels)
             #inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
     
             # zero the parameter gradients
