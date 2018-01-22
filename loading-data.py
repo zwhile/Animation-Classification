@@ -103,7 +103,7 @@ def main(argv):
 #---------------------------------------------------------------------------------------- 
     file = open('testfile.txt','w') 
       
-    for epoch in range(200):  # loop over the dataset multiple times
+    for epoch in range(1000):  # loop over the dataset multiple times
 
         running_loss = 0.0
         #print(dataset_loader.__len__())
