@@ -63,6 +63,9 @@ def main(argv):
     dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                                  batch_size=4, shuffle=True,
                                                  num_workers=0)
+    testloader = torch.utils.data.DataLoader(cartoon_dataset,
+                                                 batch_size=4, shuffle=False,
+                                                 num_workers=0)    
     classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
     
     def imshow(img):
@@ -91,23 +94,26 @@ def main(argv):
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
-    #net.cuda()
+    net.cuda()
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------    
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 #----------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------       
-    for epoch in range(20):  # loop over the dataset multiple times
+#---------------------------------------------------------------------------------------- 
+    file = open('testfile.txt','w') 
+      
+    for epoch in range(200):  # loop over the dataset multiple times
 
         running_loss = 0.0
+        #print(dataset_loader.__len__())
         for i, data in enumerate(dataset_loader, 0):
             # get the inputs
             inputs, labels = data
     
             # wrap them in Variable
-            inputs, labels = Variable(inputs), Variable(labels)
-            #inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            #inputs, labels = Variable(inputs), Variable(labels)
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
     
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -120,12 +126,48 @@ def main(argv):
     
             # print statistics
             running_loss += loss.data[0]
-            if i % 2000 == 1999:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / 2000))
+            if i % 1000 == 999:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
+                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
+            
 
     print('Finished Training')
-
+    file.write('Finished training.\n')
+#----------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------- 
+    dataiter = iter(dataset_loader)
+    correct = 0
+    total = 0
+    for data in testloader:
+        images, labels = data
+        outputs = net(Variable(images.cuda()))
+        _, predicted = torch.max(outputs.data, 1)
+        total += labels.size(0)
+        correct += (predicted == labels.cuda()).sum()
+    
+    print('Accuracy of the network on the test images: %d %%' % (100 * correct / total))
+    file.write('Accuracy of the network on the test images: %d %% \n' % (100 * correct / total))
+#----------------------------------------------------------------------------------------
+#----------------------------------------------------------------------------------------     
+    class_correct = list(0. for i in range(5))
+    class_total = list(0. for i in range(5))
+    for data in testloader:
+        images, labels = data
+        outputs = net(Variable(images.cuda()))
+        _, predicted = torch.max(outputs.data, 1)
+        c = (predicted == labels.cuda()).squeeze()
+        for i in range(4):
+            label = labels[i]
+            class_correct[label] += c[i]
+            class_total[label] += 1
+    
+    
+    for i in range(5):
+        print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
+        file.write('Accuracy of %5s : %2d %% \n' % (classes[i], 100 * class_correct[i] / class_total[i]))
+    file.close()
+#----------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------- 
 if __name__ == "__main__":
     main(sys.argv)
