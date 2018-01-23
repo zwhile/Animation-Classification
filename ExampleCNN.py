@@ -47,7 +47,7 @@ class Net(nn.Module):
         return x
 
 def main(argv):
-    
+
     data_transform = transforms.Compose([
             #transforms.Scale((32,32)),
             #transforms.RandomResizedCrop(224),
@@ -61,15 +61,15 @@ def main(argv):
     cartoon_dataset = datasets.ImageFolder(root='Data/Training'
                                            ,transform=data_transform)
     cartoon_dataset_test = datasets.ImageFolder(root='Data/Testing'
-                                           ,transform=data_transform)    
+                                           ,transform=data_transform)
     dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                                  batch_size=4, shuffle=True,
                                                  num_workers=0)
     testloader = torch.utils.data.DataLoader(cartoon_dataset_test,
                                                  batch_size=4, shuffle=False,
-                                                 num_workers=0)    
+                                                 num_workers=0)
     classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
-    
+
     def imshow(img):
         #norm_img = img
         #img = img / 2 + 0.5     # unnormalize
@@ -83,12 +83,12 @@ def main(argv):
         #print("min norm: {}".format(np.amin(np.transpose(npimg, (1, 2, 0)))))
         #plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
         #plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    
-    
+
+
     # get some random training images
     dataiter = iter(dataset_loader)
     images, labels = dataiter.next()
-    
+
     # show images
     #imshow(torchvision.utils.make_grid(images))
     # print labels
@@ -98,46 +98,46 @@ def main(argv):
     net = Net()
     net.cuda()
 #----------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------    
+#----------------------------------------------------------------------------------------
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
 #----------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------- 
-    file = open('testfile.txt','w') 
-      
-    for epoch in range(2):  # loop over the dataset multiple times
+#----------------------------------------------------------------------------------------
+    file = open('testfile.txt','w')
+
+    for epoch in range(1000):  # loop over the dataset multiple times
 
         running_loss = 0.0
         #print(dataset_loader.__len__())
         for i, data in enumerate(dataset_loader, 0):
             # get the inputs
             inputs, labels = data
-    
+
             # wrap them in Variable
             #inputs, labels = Variable(inputs), Variable(labels)
             inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
-    
+
             # zero the parameter gradients
             optimizer.zero_grad()
-    
+
             # forward + backward + optimize
             outputs = net(inputs)
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-    
+
             # print statistics
             running_loss += loss.data[0]
             if i % 1000 == 999:    # print every 2000 mini-batches
                 print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
                 file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 2000))
                 running_loss = 0.0
-            
+
 
     print('Finished Training')
     file.write('Finished training.\n')
 #----------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------- 
+#----------------------------------------------------------------------------------------
     dataiter = iter(dataset_loader)
     correct = 0
     total = 0
@@ -147,11 +147,11 @@ def main(argv):
         _, predicted = torch.max(outputs.data, 1)
         total += labels.size(0)
         correct += (predicted == labels.cuda()).sum()
-    
+
     print('Accuracy of the network on the test images: %d %%' % (100 * correct / total))
     file.write('Accuracy of the network on the test images: %d %% \n' % (100 * correct / total))
 #----------------------------------------------------------------------------------------
-#----------------------------------------------------------------------------------------     
+#----------------------------------------------------------------------------------------
     class_correct = list(0. for i in range(5))
     class_total = list(0. for i in range(5))
     for data in testloader:
@@ -163,13 +163,13 @@ def main(argv):
             label = labels[i]
             class_correct[label] += c[i]
             class_total[label] += 1
-    
-    
+
+
     for i in range(5):
         print('Accuracy of %5s : %2d %%' % (classes[i], 100 * class_correct[i] / class_total[i]))
         file.write('Accuracy of %5s : %2d %% \n' % (classes[i], 100 * class_correct[i] / class_total[i]))
     file.close()
 #----------------------------------------------------------------------------------------
-#---------------------------------------------------------------------------------------- 
+#----------------------------------------------------------------------------------------
 if __name__ == "__main__":
     main(sys.argv)
