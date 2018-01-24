@@ -11,6 +11,8 @@ import torchvision
 import torchvision.transforms as transforms
 from torchvision import datasets
 
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -23,25 +25,31 @@ import torch.optim as optim
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.conv1 = nn.Conv2d(3, 10, 2) # old: (3,6,5) 
         self.pool = nn.MaxPool2d(2, 2, padding=1)
-        self.conv2 = nn.Conv2d(10, 25, 2) # old: (6,16,5)
-        self.fc1 = nn.Linear(60 * 80 * 25, 120) # old: 16 * 5 * 5
-        self.fc2 = nn.Linear(120, 84)
-        self.fc3 = nn.Linear(84, 10)
+        self.conv1 = nn.Conv2d(3, 64, 2) # old: (3,6,5) 
+        self.conv2 = nn.Conv2d(64, 128, 2) # old: (6,16,5)
+        self.conv3 = nn.Conv2d(128, 256, 2) # added by ZW
+        self.conv4 = nn.Conv2d(256, 512, 2) # added by ZW
+        self.fc1 = nn.Linear(512 * 15 * 20, 1000) # old: 16 * 5 * 5
+        self.fc2 = nn.Linear(1000, 100)
+        self.fc3 = nn.Linear(100,10)
 
     def forward(self, x):
         #print("start: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv1(x)))
+        x = self.pool(F.relu(self.conv1(x))) 
         #print("conv1: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv2(x)))
+        x = self.pool(F.relu(self.conv2(x))) # [4 x ]
         #print("conv2: {}".format(x.size()))
-        x = x.view(-1, 60 * 80 * 25) # old: 16 * 5 * 5
+        x = self.pool(F.relu(self.conv3(x)))
+        #print("conv3: {}".format(x.size()))
+        x = self.pool(F.relu(self.conv4(x)))
+        #print("conv4: {}".format(x.size()))
+        x = x.view(-1, 512 * 15 * 20) # old: 16 * 5 * 5
         #print("view: {}".format(x.size()))
         x = F.relu(self.fc1(x))
-        #print("relu: {}".format(x.size()))
+        #print("fc1: {}".format(x.size()))
         x = F.relu(self.fc2(x))
-        #print("relu: {}".format(x.size()))
+        #print("fc2: {}".format(x.size()))
         x = self.fc3(x)
         #print("fc3: {}".format(x.size()))
         #print()
@@ -55,16 +63,28 @@ def main(argv):
             #transforms.RandomResizedCrop(32),
             transforms.Resize((240,320)),
             #transforms.RandomResizedCrop((240,320)),
-            #transforms.RandomHorizontalFlip(),
+            transforms.RandomHorizontalFlip(),
+            transforms.ColorJitter(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+    ])
+    
+    test_data_transform = transforms.Compose([
+            #transforms.Scale((32,32)),
+            #transforms.RandomResizedCrop(224),
+            #transforms.RandomResizedCrop(32),
+            transforms.Resize((240,320)),
+            #transforms.RandomResizedCrop((240,320)),
+            transforms.ToTensor(),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))            
             #transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  #std=[0.229, 0.224, 0.225])
-        ])
+    ])
+    
     cartoon_dataset = datasets.ImageFolder(root='Data/Training'
                                            ,transform=data_transform)
     cartoon_dataset_test = datasets.ImageFolder(root='Data/Testing'
-                                           ,transform=data_transform)    
+                                           ,transform=test_data_transform)    
     dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
                                                  batch_size=4, shuffle=True,
                                                  num_workers=0)
@@ -107,8 +127,21 @@ def main(argv):
 #----------------------------------------------------------------------------------------
 #---------------------------------------------------------------------------------------- 
     file = open('testfile.txt','w') 
-      
-    for epoch in range(2):  # loop over the dataset multiple times
+    
+    graphLoss = []
+    graphStep = []
+    fig = plt.figure()
+    n = min(len(graphStep), len(graphLoss))
+    plt.semilogy(np.array(graphStep)[:n], np.array(graphLoss)[:n])
+    plt.title('Loss')
+    plt.grid(True)
+
+    fig.tight_layout()
+  #print('file: {}'.format(file[48:]))
+    fig.savefig('losspic.png')
+    
+    
+    for epoch in range(1000):  # loop over the dataset multiple times
 
         running_loss = 0.0
         #print(dataset_loader.__len__())
@@ -128,12 +161,23 @@ def main(argv):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
+            graphLoss.append(loss.data[0])
+            graphStep.append(epoch*len(dataset_loader) + i)
+            n = min(len(graphStep), len(graphLoss))
+            plt.semilogy(np.array(graphStep)[:n], np.array(graphLoss)[:n])
+            plt.title('Loss')
+            plt.grid(True)
+            fig.tight_layout()
+            fig.savefig('losspic.png')
     
             # print statistics
             running_loss += loss.data[0]
-            if i % 1000 == 999:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 2000))
-                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 2000))
+            if i == 0 and epoch == 0:
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss)) # originally 2000
+                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss)) # originally 2000
+            if i % 500 == 499:    # print every 2000 mini-batches
+                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 500)) # originally 2000
+                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 500)) # originally 2000
                 running_loss = 0.0
             
 
