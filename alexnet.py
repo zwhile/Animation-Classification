@@ -23,47 +23,51 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, num_classes=5):
         super(Net, self).__init__()
-        self.pool = nn.MaxPool2d(2, 2, padding=1)
-        self.conv1 = nn.Conv2d(3, 64, 2) # old: (3,6,5)
-        self.conv2 = nn.Conv2d(64, 128, 2) # old: (6,16,5)
-        self.conv3 = nn.Conv2d(128, 256, 2) # added by ZW
-        self.conv4 = nn.Conv2d(256, 512, 2) # added by ZW
-        self.fc1 = nn.Linear(512 * 15 * 20, 1000) # old: 16 * 5 * 5
-        self.fc2 = nn.Linear(1000, 100)
-        self.fc3 = nn.Linear(100,10)
+        self.features = nn.Sequential(
+            nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(64, 192, kernel_size=5, padding=2),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+            nn.Conv2d(192, 384, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(384, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.Conv2d(256, 256, kernel_size=3, padding=1),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=3, stride=2),
+        )
+        self.classifier = nn.Sequential(
+            nn.Dropout(),
+            nn.Linear(256 * 6 * 6, 4096),
+            nn.ReLU(inplace=True),
+            nn.Dropout(),
+            nn.Linear(4096, 4096),
+            nn.ReLU(inplace=True),
+            nn.Linear(4096, num_classes),
+        )
 
     def forward(self, x):
-        #print("start: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv1(x)))
-        #print("conv1: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv2(x))) # [4 x ]
-        #print("conv2: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv3(x)))
-        #print("conv3: {}".format(x.size()))
-        x = self.pool(F.relu(self.conv4(x)))
-        #print("conv4: {}".format(x.size()))
-        x = x.view(-1, 512 * 15 * 20) # old: 16 * 5 * 5
-        #print("view: {}".format(x.size()))
-        x = F.relu(self.fc1(x))
-        #print("fc1: {}".format(x.size()))
-        x = F.relu(self.fc2(x))
-        #print("fc2: {}".format(x.size()))
-        x = self.fc3(x)
-        #print("fc3: {}".format(x.size()))
-        #print()
+        x = self.features(x)
+        x = x.view(x.size(0), 256 * 6 * 6)
+        x = self.classifier(x)
         return x
 
 def main(argv):
 
+    lossPrint = 0.01
+
     data_transform = transforms.Compose([
             #transforms.Scale((32,32)),
-            #transforms.RandomResizedCrop(224),
+            transforms.RandomResizedCrop(224),
             #transforms.RandomResizedCrop(32),
-            transforms.Resize((240,320)),
+            #transforms.Resize((240,320)),
             #transforms.RandomResizedCrop((240,320)),
             transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
             transforms.ColorJitter(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -73,7 +77,7 @@ def main(argv):
             #transforms.Scale((32,32)),
             #transforms.RandomResizedCrop(224),
             #transforms.RandomResizedCrop(32),
-            transforms.Resize((240,320)),
+            transforms.Resize((224,224)),
             #transforms.RandomResizedCrop((240,320)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
@@ -86,10 +90,10 @@ def main(argv):
     cartoon_dataset_test = datasets.ImageFolder(root='Data/Testing'
                                            ,transform=test_data_transform)
     dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
-                                                 batch_size=4, shuffle=True,
+                                                 batch_size=128, shuffle=True,
                                                  num_workers=0)
     testloader = torch.utils.data.DataLoader(cartoon_dataset_test,
-                                                 batch_size=4, shuffle=False,
+                                                 batch_size=128, shuffle=False,
                                                  num_workers=0)
     classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
 
@@ -123,30 +127,31 @@ def main(argv):
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(net.parameters(), lr=0.01, momentum=0.9)
+    optimizer = optim.SGD(net.parameters(), lr=lossPrint, momentum=0.9, weight_decay=0.0005)
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
-    file = open('foo_testfile.txt','w')
+    file = open('alexnet_Results.txt','w')
 
-    graphLoss = []
-    graphStep = []
+    graphLossEpoch = []
+    graphStepEpoch = []
+    graphLossIteration = []
+    graphStepIteration = []
+    #fig = plt.figure()
     fig = plt.figure()
-    #n = min(len(graphStep), len(graphLoss))
-    #plt.semilogy(np.array(graphStep)[:n], np.array(graphLoss)[:n])
-    #plt.title('Loss')
-    #plt.grid(True)
-    #fig.tight_layout()
-    #print('file: {}'.format(file[48:]))
-    #fig.savefig('foo_losspic.png')
+    axes = fig.subplots(nrows=2, ncols=1)
+
+    plt.figure(1)
 
 
-    for epoch in range(200):  # loop over the dataset multiple times
-
+    for epoch in range(20):  # loop over the dataset multiple times
+        #print()
         running_loss = 0.0
+        epoch_loss = 0.0
         #print(dataset_loader.__len__())
         for i, data in enumerate(dataset_loader, 0):
             # get the inputs
             inputs, labels = data
+
 
             # wrap them in Variable
             #inputs, labels = Variable(inputs), Variable(labels)
@@ -160,24 +165,65 @@ def main(argv):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            graphLoss.append(loss.data[0])
-            graphStep.append(epoch*len(dataset_loader) + i)
-            n = min(len(graphStep), len(graphLoss))
-            plt.semilogy(np.array(graphStep)[:n], np.array(graphLoss)[:n])
-            plt.title('Loss')
+            print('{}.{}: Loss = {}'.format(epoch+1, i+1, loss.data[0]))
+            file.write('{}.{}: Loss = {}\n'.format(epoch+1, i+1, loss.data[0]))
+
+            graphLossIteration.append(loss.data[0])
+            graphStepIteration.append(i+(375*epoch))
+            n = min(len(graphStepIteration), len(graphLossIteration))
+            '''
+            plt.semilogy(np.array(graphStepIteration)[:n], np.array(graphLossIteration)[:n])
+            plt.title('lr = {}'.format(lossPrint))
+            plt.ylabel('Loss')
+            plt.xlabel('# Iterations')
             plt.grid(True)
             fig.tight_layout()
-            fig.savefig('foo_losspic.png')
+            fig.savefig('alexnet_losspic_iterations.png')
+            '''
+            #torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet_most_recent.ptm')
 
             # print statistics
             running_loss += loss.data[0]
-            if i == 0 and epoch == 0:
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss)) # originally 2000
-                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss)) # originally 2000
-            if i % 500 == 499:    # print every 2000 mini-batches
-                print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 500)) # originally 2000
-                file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 500)) # originally 2000
+            epoch_loss += loss.data[0]
+            #if i == 0 and epoch == 0:
+                #print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss)) # originally 2000
+                #file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss)) # originally 2000
+            if i % 375 == 374:    # print every 2000 mini-batches
+                #print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 375)) # originally 2000
+                #file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 375)) # originally 2000
                 running_loss = 0.0
+                graphLossEpoch.append(epoch_loss/375)
+                graphStepEpoch.append(epoch)
+                '''n = min(len(graphStepEpoch), len(graphLossEpoch))
+                plt.semilogy(np.array(graphStepEpoch)[:n], np.array(graphLossEpoch)[:n])
+                plt.title('lr = {}'.format(lossPrint))
+                plt.ylabel('Loss')
+                plt.xlabel('# Epochs')
+                plt.grid(True)
+                fig.tight_layout()
+                fig.savefig('alexnet_losspic_epochs.png')'''
+                epoch_loss = 0.0
+                torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet_{}_epochs.ptm'.format(epoch+1))
+
+            fig.suptitle('lr = {}'.format(lossPrint))
+            plt.subplot(211)
+            n = min(len(graphStepIteration), len(graphLossIteration))
+            plt.semilogy(np.array(graphStepIteration)[:n], np.array(graphLossIteration)[:n])
+            plt.ylabel('Loss')
+            plt.xlabel('# Iterations')
+            plt.grid(True)
+            fig.tight_layout()
+            plt.subplot(212)
+            n = min(len(graphStepEpoch), len(graphLossEpoch))
+            plt.semilogy(np.array(graphStepEpoch)[:n], np.array(graphLossEpoch)[:n])
+            plt.ylabel('Loss')
+            plt.xlabel('# Epochs')
+            plt.grid(True)
+            fig.tight_layout()
+            fig.subplots_adjust(top=0.9)
+            fig.savefig('loss.png')
+
+
 
 
     print('Finished Training')
