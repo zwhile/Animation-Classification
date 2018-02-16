@@ -143,7 +143,7 @@ def main(argv):
     plt.figure(1)
 
 
-    for epoch in range(20):  # loop over the dataset multiple times
+    for epoch in range(200):  # loop over the dataset multiple times
         #print()
         running_loss = 0.0
         epoch_loss = 0.0

@@ -86,8 +86,7 @@ def main(argv):
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
-    net .load_state_dict(torch.load('/workspace/shared/biometrics-project/models/alexnet2_14_epochs.ptm'))
-    #net = torch.load('/workspace/shared/biometrics-project/models/alexnet_22_epochs.ptm')['state_dict']
+    net .load_state_dict(torch.load('/workspace/shared/biometrics-project/models/alexnet3_55_epochs.ptm'))
     net.cuda()
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
