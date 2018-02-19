@@ -12,7 +12,7 @@ import torchvision.transforms as transforms
 from torchvision import datasets
 
 import matplotlib
-matplotlib.use('Agg')
+matplotlib.use('Agg') # needed due to server xdisplay error
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -61,11 +61,7 @@ def main(argv):
     lossPrint = 0.001
 
     data_transform = transforms.Compose([
-            #transforms.Scale((32,32)),
             transforms.RandomResizedCrop(224),
-            #transforms.RandomResizedCrop(32),
-            #transforms.Resize((240,320)),
-            #transforms.RandomResizedCrop((240,320)),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
             transforms.ColorJitter(),
@@ -74,15 +70,9 @@ def main(argv):
     ])
 
     test_data_transform = transforms.Compose([
-            #transforms.Scale((32,32)),
-            #transforms.RandomResizedCrop(224),
-            #transforms.RandomResizedCrop(32),
             transforms.Resize((224,224)),
-            #transforms.RandomResizedCrop((240,320)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-            #transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                 #std=[0.229, 0.224, 0.225])
     ])
 
     cartoon_dataset = datasets.ImageFolder(root='Data/Training'
@@ -98,18 +88,10 @@ def main(argv):
     classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
 
     def imshow(img):
-        #norm_img = img
-        #img = img / 2 + 0.5     # unnormalize
+        img = img / 2 + 0.5     # unnormalize, may not be needed
         npimg = img.numpy()
-        #print(np.transpose(npimg, (1, 2, 0)))
-        print("max unnorm: {}".format(np.amax(np.transpose(npimg, (1, 2, 0)))))
-        print("min unnorm: {}".format(np.amin(np.transpose(npimg, (1, 2, 0)))))
-        print()
-        #npimg = norm_img.numpy()
-        #print("max norm: {}".format(np.amax(np.transpose(npimg, (1, 2, 0)))))
-        #print("min norm: {}".format(np.amin(np.transpose(npimg, (1, 2, 0)))))
-        #plt.imsave("foo.png", np.transpose(npimg, (1, 2, 0)))
-        #plt.imshow(np.transpose(npimg, (1, 2, 0)))
+        plt.imsave("preview.png", np.transpose(npimg, (1, 2, 0)))
+        plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
     # get some random training images
@@ -117,9 +99,10 @@ def main(argv):
     images, labels = dataiter.next()
 
     # show images
-    #imshow(torchvision.utils.make_grid(images))
+    imshow(torchvision.utils.make_grid(images))
+
     # print labels
-    #print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+    print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
@@ -136,7 +119,6 @@ def main(argv):
     graphStepEpoch = []
     graphLossIteration = []
     graphStepIteration = []
-    #fig = plt.figure()
     fig = plt.figure()
     axes = fig.subplots(nrows=2, ncols=1)
 
@@ -144,18 +126,16 @@ def main(argv):
 
 
     for epoch in range(200):  # loop over the dataset multiple times
-        #print()
         running_loss = 0.0
         epoch_loss = 0.0
-        #print(dataset_loader.__len__())
         for i, data in enumerate(dataset_loader, 0):
             # get the inputs
             inputs, labels = data
 
 
             # wrap them in Variable
-            #inputs, labels = Variable(inputs), Variable(labels)
-            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda())
+            #inputs, labels = Variable(inputs), Variable(labels) # use if on CPU
+            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda()) # use if on GPU
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -166,44 +146,21 @@ def main(argv):
             loss.backward()
             optimizer.step()
             print('{}.{}: Loss = {}'.format(epoch+1, i+1, loss.data[0]))
-            file.write('{}.{}: Loss = {}\n'.format(epoch+1, i+1, loss.data[0]))
+            file.write('{}.{}: Loss = {} \n'.format(epoch+1, i+1, loss.data[0]))
 
             graphLossIteration.append(loss.data[0])
             graphStepIteration.append(i+(375*epoch))
             n = min(len(graphStepIteration), len(graphLossIteration))
-            '''
-            plt.semilogy(np.array(graphStepIteration)[:n], np.array(graphLossIteration)[:n])
-            plt.title('lr = {}'.format(lossPrint))
-            plt.ylabel('Loss')
-            plt.xlabel('# Iterations')
-            plt.grid(True)
-            fig.tight_layout()
-            fig.savefig('alexnet_losspic_iterations.png')
-            '''
-            #torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet_most_recent.ptm')
 
             # print statistics
             running_loss += loss.data[0]
             epoch_loss += loss.data[0]
-            #if i == 0 and epoch == 0:
-                #print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss)) # originally 2000
-                #file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss)) # originally 2000
-            if i % 375 == 374:    # print every 2000 mini-batches
-                #print('[%d, %5d] loss: %.3f' % (epoch + 1, i + 1, running_loss / 375)) # originally 2000
-                #file.write('[%d, %5d] loss: %.3f \n' % (epoch + 1, i + 1, running_loss / 375)) # originally 2000
+            if i % 375 == 374:    # print every 375 mini-batches (48000 images)
                 running_loss = 0.0
                 graphLossEpoch.append(epoch_loss/375)
                 graphStepEpoch.append(epoch)
-                '''n = min(len(graphStepEpoch), len(graphLossEpoch))
-                plt.semilogy(np.array(graphStepEpoch)[:n], np.array(graphLossEpoch)[:n])
-                plt.title('lr = {}'.format(lossPrint))
-                plt.ylabel('Loss')
-                plt.xlabel('# Epochs')
-                plt.grid(True)
-                fig.tight_layout()
-                fig.savefig('alexnet_losspic_epochs.png')'''
                 epoch_loss = 0.0
-                torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet3_{}_epochs.ptm'.format(epoch+1))
+                torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet/{}_epochs_training.ptm'.format(epoch+1))
 
             fig.suptitle('lr = {}'.format(lossPrint))
             plt.subplot(211)
@@ -221,7 +178,7 @@ def main(argv):
             plt.grid(True)
             fig.tight_layout()
             fig.subplots_adjust(top=0.9)
-            fig.savefig('alexnet3_loss.png')
+            fig.savefig('loss.png')
 
 
 
