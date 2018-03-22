@@ -102,3 +102,6 @@ ENV/
 
 # pytorch models/weights
 *.ptm
+
+# images
+*.png
