@@ -10,11 +10,13 @@ import torch
 import torchvision
 import torchvision.transforms as transforms
 from torchvision import datasets
-
+import os
 import matplotlib
 matplotlib.use('Agg') # needed due to server xdisplay error
 import matplotlib.pyplot as plt
 import numpy as np
+
+import time
 
 from torch.autograd import Variable
 import torch.nn as nn
@@ -22,8 +24,64 @@ import torch.nn.functional as F
 
 import torch.optim as optim
 
+import torch.utils.model_zoo as model_zoo
+
+#model_urls = {
+#    'alexnet': 'https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth',
+#}
+
+def getEpoch(inLine):
+    return int(inLine[:inLine.index('.')])
+
+def getIter(inLine):
+    return int(inLine[inLine.index('.')+1:inLine.index(':')])
+
+def getNumIters(inLines):
+    assert(getEpoch(inLines[0]) == 1)
+    assert(getIter(inLines[0]) == 1)
+    cont = True
+    ind = 0
+    while(cont):
+        if getEpoch(inLines[ind]) == 1:
+            ind += 1
+        else:
+            cont = False
+            return getIter(inLines[ind-1])
+
+def getLastLine(inLines):
+    return inLines[-1]
+
+def removeLines(inLines):
+    lastLine = getLastLine(inLines)
+    print(lastLine)
+    if getIter(lastLine) != getNumIters(inLines):
+        newList = [k for k in inLines if getEpoch(k) != getEpoch(lastLine)]
+    else:
+        newList = inLines
+    return newList
+
+def removeUnfinished(thisFile, backup=True):
+    from shutil import copyfile
+    if backup:
+        copyName = thisFile[:thisFile.index('.')]
+        copyName += '_backup.txt'
+        copyfile(thisFile, copyName)
+    if os.path.isfile(thisFile):
+        with open(thisFile, 'r') as file:
+            lines = file.readlines()
+            newList = removeLines(lines)
+        with open(thisFile, 'w') as file:
+            for i in newList:
+                file.write(i)
+
+def getLastEpoch(thisFile):
+    with open(thisFile, 'r') as file:
+        lines = file.readlines()
+        lastLine = getLastLine(lines)
+        return int(getEpoch(lastLine))
+
 class Net(nn.Module):
-    def __init__(self, num_classes=5):
+    def __init__(self, num_classes=len(os.listdir(os.path.join(os.getcwd(), 'Data', 'Training')))):
         super(Net, self).__init__()
         self.features = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=11, stride=4, padding=2),
@@ -57,85 +115,118 @@ class Net(nn.Module):
         return x
 
 def main(argv):
+    thisDir = '/workspace/shared/biometrics-project/Data'
+    #torch.backends.cudnn.benchmark = True
 
-    lossPrint = 0.001
-
-    data_transform = transforms.Compose([
+    train_transform = transforms.Compose([
+            ##transforms.Resize((224,224)),
+            #transforms.RandomCrop(224),
             transforms.RandomResizedCrop(224),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
             transforms.ColorJitter(),
+            #transforms.ColorJitter(),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    test_data_transform = transforms.Compose([
+    test_transform = transforms.Compose([
             transforms.Resize((224,224)),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
     ])
 
-    cartoon_dataset = datasets.ImageFolder(root='Data/Training'
-                                           ,transform=data_transform)
-    cartoon_dataset_test = datasets.ImageFolder(root='Data/Testing'
-                                           ,transform=test_data_transform)
-    dataset_loader = torch.utils.data.DataLoader(cartoon_dataset,
-                                                 batch_size=128, shuffle=True,
-                                                 num_workers=0)
-    testloader = torch.utils.data.DataLoader(cartoon_dataset_test,
-                                                 batch_size=128, shuffle=False,
-                                                 num_workers=0)
-    classes = ('BillyMandy', 'Chowder', 'EdEddEddy', 'Fosters', 'Lazlo')
+    basedir = os.getcwd()
 
-    def imshow(img):
-        img = img / 2 + 0.5     # unnormalize, may not be needed
-        npimg = img.numpy()
-        plt.imsave("preview.png", np.transpose(npimg, (1, 2, 0)))
-        plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    train_set = datasets.ImageFolder(root=os.path.join(basedir, 'Data', 'Training'),
+                                                transform=train_transform)
+    test_set = datasets.ImageFolder(root=os.path.join(basedir, 'Data', 'Testing'),
+                                                transform=test_transform)
+    train_loader = torch.utils.data.DataLoader(train_set,
+                                                batch_size=128, shuffle=True,
+                                                num_workers=8)
+    test_loader = torch.utils.data.DataLoader(test_set,
+                                                batch_size=64, shuffle=False,
+                                                num_workers=0)
+    classes = sorted(os.listdir(os.path.join(basedir, 'Data', 'Training')))
+    print('Classes: {}'.format(classes))
+
+    #def imshow(img):
+        #img = img / 2 + 0.5     # unnormalize, may not be needed
+        #npimg = img.numpy()
+        #plt.imsave("preview.png", np.transpose(npimg, (1, 2, 0)))
+        #plt.imshow(np.transpose(npimg, (1, 2, 0)))
 
 
     # get some random training images
-    dataiter = iter(dataset_loader)
-    images, labels = dataiter.next()
+    #dataiter = iter(dataset_loader)
+    #images, labels = dataiter.next()
 
     # show images
-    imshow(torchvision.utils.make_grid(images))
+    #imshow(torchvision.utils.make_grid(images))
 
     # print labels
-    print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
+    #print(' '.join('%5s' % classes[labels[j]] for j in range(4)))
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     net = Net()
     net.cuda()
+    #net.load_state_dict(model_zoo.load_url('https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth'))
+    pretrained_state = model_zoo.load_url('https://download.pytorch.org/models/alexnet-owt-4df8aa71.pth')
+    model_state = net.state_dict()
+
+    pretrained_state = { k:v for k,v in pretrained_state.items() if k in model_state and v.size() == model_state[k].size() }
+    model_state.update(pretrained_state)
+    net.load_state_dict(model_state)
+    #net.load_state_dict(torch.load('alexnet_200k_0012_epochs_training.ptm'))
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
     criterion = nn.CrossEntropyLoss()
+    criterion = criterion.cuda()
+    #lossPrint = 0.01
+    lossPrint = 0.001 # because starting from iteration 14
     optimizer = optim.SGD(net.parameters(), lr=lossPrint, momentum=0.9, weight_decay=0.0005)
 #----------------------------------------------------------------------------------------
 #----------------------------------------------------------------------------------------
-    file = open('alexnet3_Results.txt','w')
+
+    resFile = 'alexnet_Results.txt'
+    if os.path.isfile(resFile):
+        removeUnfinished(resFile)
+        lastEpoch = getLastEpoch(resFile)
+        file = open(resFile, 'a')
+    else:
+        file = open(resFile, 'w')
+    #file = open('alexnet_200k_Results.txt','w')
 
     graphLossEpoch = []
     graphStepEpoch = []
     graphLossIteration = []
     graphStepIteration = []
-    fig = plt.figure()
-    axes = fig.subplots(nrows=2, ncols=1)
+    #fig = plt.figure()
+    #axes = fig.subplots(nrows=2, ncols=1)
 
-    plt.figure(1)
+    #plt.figure(1)
 
+    #epochSize = 383
+    lastEpoch = 0
 
-    for epoch in range(200):  # loop over the dataset multiple times
-        running_loss = 0.0
-        epoch_loss = 0.0
-        for i, data in enumerate(dataset_loader, 0):
+    for epoch in range(9999):  # loop over the dataset multiple times
+        #running_loss = 0.0
+        #epoch_loss = 0.0
+        epoch += lastEpoch
+        torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet_{:04}.ptm'.format(epoch))
+        #if epoch % 10 == 0 and epoch != 0:
+            #lossPrint = lossPrint/10
+            #optimizer = optim.SGD(net.parameters(), lr=lossPrint, momentum=0.9, weight_decay=0.0005)
+        currTime = time.time()
+        for i, data in enumerate(train_loader, 0):
             # get the inputs
-            inputs, labels = data
+            #inputs, labels = data
 
 
             # wrap them in Variable
             #inputs, labels = Variable(inputs), Variable(labels) # use if on CPU
-            inputs, labels = Variable(inputs.cuda()), Variable(labels.cuda()) # use if on GPU
+            inputs, labels = Variable(data[0].cuda(async=True)), Variable(data[1].cuda(async=True)) # use if on GPU
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -145,23 +236,25 @@ def main(argv):
             loss = criterion(outputs, labels)
             loss.backward()
             optimizer.step()
-            print('{}.{}: Loss = {}'.format(epoch+1, i+1, loss.data[0]))
-            file.write('{}.{}: Loss = {} \n'.format(epoch+1, i+1, loss.data[0]))
+            print('{}.{}: Loss = {} (lr = {}, time = {})'.format(epoch+1, i+1, loss.data[0], lossPrint, float(time.time()-currTime)*(1125/3600)))
+            currTime = time.time()
+            file.write('{}.{}: Loss = {} (lr = {})\n'.format(epoch+1, i+1, loss.data[0], lossPrint))
 
-            graphLossIteration.append(loss.data[0])
-            graphStepIteration.append(i+(375*epoch))
-            n = min(len(graphStepIteration), len(graphLossIteration))
+            #graphLossIteration.append(loss.data[0])
+            #graphStepIteration.append(i+(epochSize*epoch))
+            #n = min(len(graphStepIteration), len(graphLossIteration))
 
             # print statistics
-            running_loss += loss.data[0]
-            epoch_loss += loss.data[0]
-            if i % 375 == 374:    # print every 375 mini-batches (48000 images)
-                running_loss = 0.0
-                graphLossEpoch.append(epoch_loss/375)
-                graphStepEpoch.append(epoch)
-                epoch_loss = 0.0
-                torch.save(net.state_dict(), '/workspace/shared/biometrics-project/models/alexnet/{}_epochs_training.ptm'.format(epoch+1))
+            #running_loss += loss.data[0]
+            #epoch_loss += loss.data[0]
+            #if i % epochSize == (epochSize-1):    # print every 203 mini-batches
+                #running_loss = 0.0
+                #graphLossEpoch.append(epoch_loss/epochSize)
+                #graphStepEpoch.append(epoch)
+                #epoch_loss = 0.0
+                #torch.save(net.state_dict(), '/workspace/shared/UG-Res-S18/models/big_resnet_{:02}_epochs_training.ptm'.format(epoch+1))
 
+            '''
             fig.suptitle('lr = {}'.format(lossPrint))
             plt.subplot(211)
             n = min(len(graphStepIteration), len(graphLossIteration))
@@ -178,7 +271,11 @@ def main(argv):
             plt.grid(True)
             fig.tight_layout()
             fig.subplots_adjust(top=0.9)
-            fig.savefig('loss.png')
+            fig.savefig('lastresnet_loss.png')
+            plt.close(fig)
+            '''
+            del inputs, labels, outputs, loss
+            torch.cuda.empty_cache()
 
 
 
