@@ -1,1 +1,1 @@
-# biometrics-cartoon-project
+# Animated Series Classification
